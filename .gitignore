@@ -1,2 +1,3 @@
 /target
-src/app_config.rs
+app_state/src/app_config.rs
+bridge/src/_main.rs

@@ -1,0 +1,18 @@
+[package]
+name = "tron-bridge"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+actix-rt = "2.9.0"
+actix-web = "4.4.0"
+awc = {version = "3.2.0", features = ["rustls-0_21"] }
+ecdsa = "0.16.8"
+k256 = "0.13.1"
+p256 = {version = "0.13.2", features = ["pem"]}
+rustls = "0.21.7"
+secp256k1 = {version = "0.28.0", features = ["hashes-std", "recovery"]}
+serde = {version = "1.0.189", features = ["derive"]}
+serde_json = "1.0.107"
+webpki-roots = "0.25.2"
+app_state = { path = "../app_state" }

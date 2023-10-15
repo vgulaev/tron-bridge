@@ -256,6 +256,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "app_state"
+version = "0.1.0"
+dependencies = [
+ "tokio",
+ "tokio-postgres",
+]
+
+[[package]]
 name = "async-trait"
 version = "0.1.74"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1620,6 +1628,7 @@ version = "0.1.0"
 dependencies = [
  "actix-rt",
  "actix-web",
+ "app_state",
  "awc",
  "ecdsa",
  "k256",
@@ -1628,8 +1637,6 @@ dependencies = [
  "secp256k1",
  "serde",
  "serde_json",
- "tokio",
- "tokio-postgres",
  "webpki-roots",
 ]
 

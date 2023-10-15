@@ -1,7 +1,7 @@
-use actix_web::{web, App, HttpServer, Responder};
+use actix_web::{http::header::ContentType, web, App, HttpResponse, HttpServer, Responder};
 // use tokio::time::{sleep, Duration};
+use app_state::{get_app_state, AppState};
 use serde::Deserialize;
-use app_state::{AppState, get_app_state};
 
 // use env_logger::Env;
 
@@ -10,6 +10,11 @@ struct InsertWalletAddress {
   address: String,
   public_key: String,
   private_key: String,
+}
+
+#[derive(Deserialize, Debug)]
+struct TronAddress {
+  address: String,
 }
 
 // async fn test_postgres() -> Result<String> {
@@ -35,7 +40,7 @@ async fn insert_wallet_address(
   body: web::Json<InsertWalletAddress>,
 ) -> impl Responder {
   app_state
-    .pg_client
+    .client.pg
     .query(
       "INSERT INTO wallet_address (address, public_key, private_key) VALUES ($1::TEXT, $2::TEXT, $3::TEXT)",
       &[&body.address, &body.public_key, &body.private_key],
@@ -54,6 +59,19 @@ async fn not_found() -> impl Responder {
   "Looks like no page here"
 }
 
+async fn accounts(body: web::Json<TronAddress>) -> HttpResponse {
+  let url = format!(
+    "https://api.shasta.trongrid.io/v1/accounts/{}",
+    body.address
+  );
+  let resp = reqwest::get(url).await.unwrap().text().await.unwrap();
+  // println!("{:#?}", resp);
+  // "I'm accounts"
+  HttpResponse::Ok()
+    .content_type(ContentType::json())
+    .body(resp)
+}
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
   println!("Server has started");
@@ -65,14 +83,12 @@ async fn main() -> std::io::Result<()> {
       .app_data(state.clone())
       .service(
         web::scope("/api")
-        .route(
-          "/me",
-          web::post().to(me),
-        )
-        .route(
+          .route("/me", web::post().to(me))
+          .route(
             "/insert_wallet_address",
             web::post().to(insert_wallet_address),
           )
+          .service(web::scope("tron").route("/accounts", web::post().to(accounts))),
       )
       .default_service(web::route().to(not_found))
   })

@@ -3,6 +3,7 @@ mod pg_client;
 
 pub struct Clients {
   pub pg: tokio_postgres::Client,
+  pub http: reqwest::Client,
 }
 
 pub struct AppState {
@@ -15,6 +16,7 @@ pub async fn get_app_state() -> AppState {
     app_name: String::from("Hello!!!"),
     client: Clients {
       pg: pg_client::get_pg_connection().await.unwrap(),
+      http: reqwest::Client::new(),
      },
   }
 }

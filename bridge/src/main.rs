@@ -1,9 +1,13 @@
-use actix_web::{http::header::ContentType, web, App, HttpResponse, HttpServer, Responder};
+use actix_web::{
+  http::header::ContentType, middleware::Logger, web, App, HttpResponse, HttpServer, Responder,
+};
 // use tokio::time::{sleep, Duration};
+use app_config::TRON_URL;
 use app_state::{get_app_state, AppState};
+use env_logger::Env;
 use serde::Deserialize;
-
-// use env_logger::Env;
+use serde_json::json;
+mod sign;
 
 #[derive(Deserialize, Debug)]
 struct InsertWalletAddress {
@@ -17,23 +21,12 @@ struct TronAddress {
   address: String,
 }
 
-// async fn test_postgres() -> Result<String> {
-//   // let (client, connection) = tokio_postgres::connect(
-//   //   Config::new(), NoTls
-//   // ).await.unwrap();
-//   let client = get_pg_connection().await.unwrap();
-
-//   // Now we can execute a simple statement that just returns its parameter.
-//   let rows = client
-//     .query("SELECT $1::TEXT", &[&"hello world"])
-//     .await
-//     .unwrap();
-
-//   // And then check that we got back the same string we sent over.
-//   let value: &str = rows[0].get(0);
-//   // println!("Test: {:?}", value);
-//   Ok(String::from(value))
-// }
+#[derive(Deserialize, Debug)]
+struct CreateSignedTransaction {
+  from: String,
+  to: String,
+  amount: u128,
+}
 
 async fn insert_wallet_address(
   app_state: web::Data<AppState>,
@@ -55,21 +48,54 @@ async fn me() -> impl Responder {
   "This is amazing Tron Bridge"
 }
 
-async fn not_found() -> impl Responder {
-  "Looks like no page here"
+async fn not_found() -> HttpResponse {
+  HttpResponse::NotFound()
+    .content_type(ContentType::plaintext())
+    .body("Looks like no page here")
 }
 
 async fn accounts(body: web::Json<TronAddress>) -> HttpResponse {
-  let url = format!(
-    "https://api.shasta.trongrid.io/v1/accounts/{}",
-    body.address
-  );
+  let url = format!("{TRON_URL}/v1/accounts/{}", body.address);
   let resp = reqwest::get(url).await.unwrap().text().await.unwrap();
-  // println!("{:#?}", resp);
-  // "I'm accounts"
   HttpResponse::Ok()
     .content_type(ContentType::json())
     .body(resp)
+}
+
+async fn create_signed_transaction(
+  app_state: web::Data<AppState>,
+  body: web::Json<CreateSignedTransaction>,
+) -> impl Responder {
+  let rows = app_state
+    .client
+    .pg
+    .query(
+      "SELECT private_key FROM wallet_address WHERE address = $1::TEXT",
+      &[&body.from],
+    )
+    .await
+    .unwrap();
+  let private_key: &str = rows[0].get(0);
+  let url = format!("{TRON_URL}/wallet/createtransaction");
+  let resp = app_state
+    .client
+    .http
+    .post(url)
+    .body(json!({
+      "owner_address": body.from,
+      "to_address": body.to,
+      "amount": body.amount,
+      "visible": true,
+    }).to_string())
+    .send()
+    .await
+    .unwrap()
+    .text()
+    .await
+    .unwrap();
+  let signed = sign::sign_transaction(resp);
+  println!("{:?}", signed.await);
+  format!("create_signed_transaction {:?}\n{:?}", body, private_key)
 }
 
 #[actix_web::main]
@@ -77,9 +103,11 @@ async fn main() -> std::io::Result<()> {
   println!("Server has started");
 
   let state = web::Data::new(get_app_state().await);
+  env_logger::init_from_env(Env::default().default_filter_or("info"));
 
   HttpServer::new(move || {
     App::new()
+      .wrap(Logger::default())
       .app_data(state.clone())
       .service(
         web::scope("/api")
@@ -87,6 +115,10 @@ async fn main() -> std::io::Result<()> {
           .route(
             "/insert_wallet_address",
             web::post().to(insert_wallet_address),
+          )
+          .route(
+            "/create_signed_transaction",
+            web::post().to(create_signed_transaction),
           )
           .service(web::scope("tron").route("/accounts", web::post().to(accounts))),
       )

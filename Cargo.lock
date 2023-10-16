@@ -240,6 +240,10 @@ version = "0.1.0"
 [[package]]
 name = "app_ecdsa"
 version = "0.1.0"
+dependencies = [
+ "lazy_static",
+ "malachite",
+]
 
 [[package]]
 name = "app_state"
@@ -2039,7 +2043,10 @@ dependencies = [
  "env_logger",
  "k256",
  "malachite",
+ "malachite-base",
+ "malachite-nz",
  "p256",
+ "rand",
  "reqwest",
  "secp256k1",
  "serde",

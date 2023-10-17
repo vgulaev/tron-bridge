@@ -243,6 +243,7 @@ version = "0.1.0"
 dependencies = [
  "lazy_static",
  "malachite",
+ "malachite-base",
 ]
 
 [[package]]
@@ -2043,7 +2044,6 @@ dependencies = [
  "env_logger",
  "k256",
  "malachite",
- "malachite-base",
  "malachite-nz",
  "p256",
  "rand",

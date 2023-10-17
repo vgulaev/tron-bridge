@@ -5,4 +5,5 @@ edition = "2021"
 
 [dependencies]
 malachite = "0.4.2"
+malachite-base = "0.4.2"
 lazy_static = "1.4.0"

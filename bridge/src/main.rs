@@ -97,7 +97,6 @@ async fn create_signed_transaction(
     .await
     .unwrap();
   let signed = sign::sign_transaction(resp, private_key).await.unwrap();
-  println!("{:?}", signed);
 
   let url = format!("{TRON_URL}/wallet/broadcasttransaction");
 

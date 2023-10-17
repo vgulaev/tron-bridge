@@ -1,7 +1,7 @@
 use malachite::Natural;
 use malachite_base::num::random::random_primitive_ints;
 use malachite_base::num::{
-  arithmetic::traits::{ModAdd, ModInverse, ModMul, ModNeg, ModPow, DivMod},
+  arithmetic::traits::{DivMod, ModAdd, ModInverse, ModMul, ModNeg, ModPow},
   conversion::traits::{FromStringBase, ToStringBase},
   logic::traits::BitIterable,
 };
@@ -97,9 +97,11 @@ impl Point {
       .mod_add(yyyy.mod_mul(Natural::from(8u32), &p).mod_neg(&p), &p);
     Point { x: t, y: y3, z: z3 }.scale()
   }
+
   pub fn is_zero(&self) -> bool {
     0 == self.x && 0 == self.y && 0 == self.z
   }
+
   pub fn scale(&self) -> Point {
     let p = curve::p();
     let z = self.z.clone().mod_inverse(&p).unwrap();
@@ -210,11 +212,9 @@ fn number_to_string(numb: Natural, len: usize) -> String {
   res
 }
 
-pub fn sign_hex_number(hexed: &str, private_key: &str) -> String {
-  println!("hexed: {:?}", hexed);
+pub fn sign_hex_number_with_k(hexed: &str, private_key: &str, k: Natural) -> String {
   let e = Natural::from_string_base(16, &hexed).unwrap();
   let d = Natural::from_string_base(16, &private_key).unwrap();
-  let k = get_random_natural_with_bits(&mut random_primitive_ints(get_rnd_seed()), 255);
   let r = g() * k.clone();
   let n = curve::order();
   let s = r
@@ -223,13 +223,21 @@ pub fn sign_hex_number(hexed: &str, private_key: &str) -> String {
     .mod_mul(d, &n)
     .mod_add(e, &n)
     .mod_mul(k.clone().mod_inverse(&n).unwrap(), n);
-  let rec_id = r.y.clone().div_mod(Natural::from(2u32)).1.add(Natural::from(27u32));
-  // s =  (pow(k, -1, order) * (e + d * point.x())) % order
-  println!("k: {:?}", k.to_string());
-  // println!("number: {:?}", numb.to_string());
-  println!("r: {:?}", r.x.to_string());
-  println!("s: {:?}", s.to_string());
+  let rec_id = r
+    .y
+    .clone()
+    .div_mod(Natural::from(2u32))
+    .1
+    .add(Natural::from(27u32));
   number_to_string(r.x, 64) + &number_to_string(s, 64) + &number_to_string(rec_id, 2)
+}
+
+pub fn sign_hex_number(hexed: &str, private_key: &str) -> String {
+  sign_hex_number_with_k(
+    hexed,
+    private_key,
+    get_random_natural_with_bits(&mut random_primitive_ints(get_rnd_seed()), 255),
+  )
 }
 
 #[cfg(test)]
@@ -308,7 +316,26 @@ mod tests {
   #[test]
   fn check_number_to_string() {
     assert_eq!(number_to_string(Natural::from(1u32), 10), "0000000001");
-    assert_eq!(number_to_string(Natural::from_string_base(16, "483a").unwrap(), 10), "000000483a");
-    assert_eq!(number_to_string(Natural::from_string_base(16, "ffffffffffffffffffffff").unwrap(), 32), "0000000000ffffffffffffffffffffff");
+    assert_eq!(
+      number_to_string(Natural::from_string_base(16, "483a").unwrap(), 10),
+      "000000483a"
+    );
+    assert_eq!(
+      number_to_string(
+        Natural::from_string_base(16, "ffffffffffffffffffffff").unwrap(),
+        32
+      ),
+      "0000000000ffffffffffffffffffffff"
+    );
+  }
+
+  #[test]
+  fn check_sign_hex_number_with_k() {
+    assert_eq!(sign_hex_number_with_k(
+      "bfc1d87ea2044ddbdc36c9f9725596d7855c2e88c033fdb0e29213c010ddb5d7",
+      "ab4a34b671936ef061602752afe26fd13a31ce75d47d0c02401ae3fdcbca968a",
+      Natural::from_string_base(10, "45815476243236585296874261893402625311887309792285287856772039354732826960223").unwrap()
+    ),
+      "1c319dc8fff6c16503b35e3278da189d3fb8f4d05d5f5ed12de443ed3e36b18aeda99b88479c3ee5ef4595f83941f14c713e9033379c28a4dd38bab7eb7010d71b");
   }
 }

@@ -81,21 +81,36 @@ async fn create_signed_transaction(
     .client
     .http
     .post(url)
-    .body(json!({
-      "owner_address": body.from,
-      "to_address": body.to,
-      "amount": body.amount,
-      "visible": true,
-    }).to_string())
+    .body(
+      json!({
+        "owner_address": body.from,
+        "to_address": body.to,
+        "amount": body.amount,
+        "visible": true,
+      })
+      .to_string(),
+    )
     .send()
     .await
     .unwrap()
     .text()
     .await
     .unwrap();
-  let signed = sign::sign_transaction(resp);
-  println!("{:?}", signed.await);
-  format!("create_signed_transaction {:?}\n{:?}", body, private_key)
+  let signed = sign::sign_transaction(resp, private_key).await.unwrap();
+  println!("{:?}", signed);
+
+  let url = format!("{TRON_URL}/wallet/broadcasttransaction");
+
+  let resp = app_state
+    .client
+    .http
+    .post(url)
+    .body(signed)
+    .send()
+    .await
+    .unwrap();
+
+  format!("create_signed_transaction {:?}\n{:?}", body, resp)
 }
 
 #[actix_web::main]

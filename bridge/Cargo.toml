@@ -5,16 +5,17 @@ edition = "2021"
 
 [dependencies]
 actix-web = "4.4.0"
-ecdsa = "0.16.8"
+aes-gcm = "0.10.3"
 env_logger = "0.10.0"
-k256 = "0.13.1"
+hex = "0.4.3"
+log = "0.4.20"
 malachite = "0.4.2"
 malachite-base = "0.4.2"
-p256 = {version = "0.13.2", features = ["pem"]}
+rand = "0.8.5"
 reqwest = {version = "0.11.22", features = ["json"]}
-secp256k1 = {version = "0.28.0", features = ["hashes-std", "recovery"]}
 serde = {version = "1.0.189", features = ["derive"]}
 serde_json = "1.0.107"
+sha256 = "1.4.0"
 
 app_config = { path = "../app_config" }
 app_ecdsa = { path = "../app_ecdsa" }

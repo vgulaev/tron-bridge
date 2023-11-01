@@ -3,9 +3,11 @@ use actix_web::{
 };
 use app_state::{get_app_state, AppState};
 use env_logger::Env;
+use log::info;
 use serde::Deserialize;
 use serde_json::json;
 mod sign;
+mod crypto;
 
 #[derive(Deserialize, Debug)]
 struct InsertWalletAddress {
@@ -56,7 +58,8 @@ async fn accounts(
   app_state: web::Data<AppState>,
   body: web::Json<TronAddress>
 ) -> HttpResponse {
-  let url = format!("{}/v1/accounts/{}", &app_state.api_host, body.address);
+  let url = format!("{}v1/accounts/{}", &app_state.api_host, body.address);
+  info!("query: {}", url);
   let resp = reqwest::get(url).await.unwrap().text().await.unwrap();
   HttpResponse::Ok()
     .content_type(ContentType::json())
@@ -71,7 +74,7 @@ async fn create_signed_transaction(
     .client
     .pg
     .query(
-      "SELECT private_key FROM wallet_address WHERE address = $1::TEXT",
+      "SELECT private_key FROM crawler_tronaddress WHERE id = $1::TEXT",
       &[&body.from],
     )
     .await

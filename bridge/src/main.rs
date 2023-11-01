@@ -1,8 +1,6 @@
 use actix_web::{
   http::header::ContentType, middleware::Logger, web, App, HttpResponse, HttpServer, Responder,
 };
-// use tokio::time::{sleep, Duration};
-use app_config::TRON_URL;
 use app_state::{get_app_state, AppState};
 use env_logger::Env;
 use serde::Deserialize;
@@ -54,8 +52,11 @@ async fn not_found() -> HttpResponse {
     .body("Looks like no page here")
 }
 
-async fn accounts(body: web::Json<TronAddress>) -> HttpResponse {
-  let url = format!("{TRON_URL}/v1/accounts/{}", body.address);
+async fn accounts(
+  app_state: web::Data<AppState>,
+  body: web::Json<TronAddress>
+) -> HttpResponse {
+  let url = format!("{}/v1/accounts/{}", &app_state.api_host, body.address);
   let resp = reqwest::get(url).await.unwrap().text().await.unwrap();
   HttpResponse::Ok()
     .content_type(ContentType::json())
@@ -76,7 +77,7 @@ async fn create_signed_transaction(
     .await
     .unwrap();
   let private_key: &str = rows[0].get(0);
-  let url = format!("{TRON_URL}/wallet/createtransaction");
+  let url = format!("{}/wallet/createtransaction", &app_state.api_host);
   let resp = app_state
     .client
     .http
@@ -98,7 +99,7 @@ async fn create_signed_transaction(
     .unwrap();
   let signed = sign::sign_transaction(resp, private_key).await.unwrap();
 
-  let url = format!("{TRON_URL}/wallet/broadcasttransaction");
+  let url = format!("{}/wallet/broadcasttransaction", &app_state.api_host);
 
   let resp = app_state
     .client
